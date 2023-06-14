@@ -164,7 +164,7 @@ def write_sample_sheets(file_groups, gex_ref, adt_ref, output_dir):
     return sheets
 
 def write_shell_script(sheets, cellranger_path, filename = 'run_cellranger_auto.sh'):
-    with open(filename, 'w') as sh:
+    with open(Path(args.outdir, filename), 'w') as sh:
         sh.write('#!/usr/bin/bash\n\n')
         for sample, config in sheets.items():
             sh.writelines(str(cellranger_path) + ' multi --id ' + sample + ' --csv ' + str(config) + '\n')
