@@ -3,7 +3,7 @@ Useful for large projects with many samples where making sheets manually is time
 Configuring the regex expressions may not be easy, consider using https://regex101.com/ to help.
 
 The script should only require basic python3 packages, but in the event you do not have them 
-installed, you can use the `python3_environment.yml` to create a conda environment similar to the one
+installed, you can use the `python3_environment.yml` to create a relatively minimal conda environment similar to the one
 I used to test this.
 
 Example program call:
