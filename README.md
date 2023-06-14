@@ -8,7 +8,14 @@ I used to test this.
 
 Example program call:
 ```
-python generate_multi_runsheets.py -f ../Data/p23120_Amanda-230608A/ -o ./auto_generated_multi_sheets/ -d '{"GEX": "Gene Expression", "ADT": "Antibody Capture", "TCR": "VDJ-T"}' -g /yerkes-cifs/runs/Genome_references/composite/macaca_mulatta_siv/Mmul10_SIV239M33626/refdata-gex-Mmul10-SIV239M33262/ -a ./ADT_feature_ref_previous_captures.csv -c /yerkes-cifs/runs/tools/cellranger/cellranger-6.1.2/cellranger --grouping_pattern "(?:.+\/)?.+(Capture-\d+).*?(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+"
+python generate_multi_runsheets.py \
+  -f <path_to_fastqs> \
+  -o ./auto_generated_multi_sheets/ \
+  -d '{"GEX": "Gene Expression", "ADT": "Antibody Capture", "TCR": "VDJ-T"}' \
+  -g <path_to_cellranger_gex_reference> \
+  -a ./ADT_feature_ref.csv \
+  -c tools/cellranger/cellranger-6.1.2/cellranger \
+  --grouping_pattern "(?:.+\/)?.+(Capture-\d+).*?(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+"
 ```
 
 The program outputs a folder of `cellranger multi` config sheets to the `--outdir` folder, as well
