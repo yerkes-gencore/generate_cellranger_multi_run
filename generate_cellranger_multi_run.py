@@ -42,8 +42,8 @@ def get_args():
         metavar='')
     parser.add_argument('--parentPath_pattern',
         help = """Regex pattern to extract the parent directory of a file (the 'fastqs' column of the cellranger multi config). 
-        Default: r'(.+\/)?(?:[^\/]+?)(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+'""",
-        default = r"(.+\/)?(?:[^\/]+?)(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+",
+        Default: r'(.+\/)[^\/]+.fastq.+'""",
+        default = r"(.+\/)[^\/]+.fastq.+",
         metavar='')
     parser.add_argument(
         '-d', '--dictionary', help = 
