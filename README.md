@@ -1,3 +1,7 @@
+The script is stored at
+
+`/yerkes-cifs/runs/tools/automation/generate_cellranger_multi_run/`
+
 A helper script to generate cellranger multi config sheets and a shell script to use them.
 Useful for large projects with many samples where making sheets manually is time-consuming or error prone.
 Configuring the regex expressions may not be easy, consider using https://regex101.com/ to help.
