@@ -37,7 +37,8 @@ Robust additions of all niche options have not been added yet, but accepted valu
 * VDJ-B
 * VDJ-T
 
-Pattern arguments should specify a single group to extract from filenames to identify 
+Pattern arguments should specify a single group to extract from filenames to identify the required information. Paths are converted to absolute paths within the program, so 
+patterns should be conscious of possible matches in the full path. 
 * **grouping_pattern**: A shared label for multiple fastqs. E.g. if you have 3 sets of files for a sample, 's001_GEX_R1/2.fastq.gz', 's001_ADT_R1/2.fastq.gz, and 's001_TCR_R1/2.fastq.gz',
   the the grouping_pattern should isolate 's001'. This will be used to generate a single config file for all these libraries, and will be the `--id` argument to `cellranger multi`. 
   There is no default, this will be specific to the names of files in your study
