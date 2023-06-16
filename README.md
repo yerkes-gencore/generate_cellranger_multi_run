@@ -1,3 +1,5 @@
+# NOTICE: the input parameters have changed but i haven't gotten around to editing this readme yet. Use '-h' to see latest parameters
+
 The script is stored at
 
 `/yerkes-cifs/runs/tools/automation/generate_cellranger_multi_run/`
