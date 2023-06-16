@@ -42,7 +42,7 @@ def get_args():
         metavar='')
     parser.add_argument('--parentPath_pattern',
         help = """Regex pattern to extract the parent directory of a file (the 'fastqs' column of the cellranger multi config). 
-        Default: r'(.+\/)[^\/]+.fastq.+'""",
+            Default: r'(.+\/)[^\/]+.fastq.+'""",
         default = r"(.+\/)[^\/]+.fastq.+",
         metavar='')
     parser.add_argument(
@@ -165,8 +165,12 @@ def write_sample_sheets(file_groups, gex_ref, adt_ref, vdj_ref, output_dir):
                     '\n'
                 ])
             fo.writelines(['[libraries]\n', 'fastq_id,fastqs,feature_types\n'])
+            ## Track written filegroups to avoid writing multiple lines for multiple lanes
+            used_files = []
             for file in file_group.files:
-                fo.writelines(','.join([file.id, file.parent_path, file.library]) + '\n')
+                if file.id not in used_files:
+                    fo.writelines(','.join([file.id, file.parent_path, file.library]) + '\n')
+                used_files.append(file.id)
         sheets[sample] = filename
     return sheets
 
