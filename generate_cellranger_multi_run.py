@@ -4,7 +4,6 @@ import glob
 import re
 import argparse
 import os
-from json import loads
 from pathlib import Path
 from sys import exit
 
@@ -18,11 +17,7 @@ def get_args():
         You can use "(?:....)" to ignore a section of your pattern for group matching.
         For help generating regex strings for your files, try using https://regex101.com/.
         The string of interest should show up as 'Group 1'.
-        """,
-        # usage=
-        # """
-        # %(prog)s
-        # """
+        """
     )
     parser.add_argument('-f', '--fastq_dir', 
         help = 'top level directory containing all folders with fastqs of interest',
@@ -45,28 +40,59 @@ def get_args():
             Default: r'(.+\/)[^\/]+.fastq.+'""",
         default = r"(.+\/)[^\/]+.fastq.+",
         metavar='')
-    parser.add_argument(
-        '-d', '--dictionary', help = 
-        """
-        Dictionary in JSON format of identifiers for library types of interest, where the key is a substring 
-        of the file and the value is the feature type for Cellranger processing.
-        Example: '{"GEX": "Gene Expression", "ADT": "Antibody Capture", "TCR": "VDJ-T"}'.
-        Note for JSON parsing, string quotes need to be double quotes
-        """,
-        required=True, metavar=''
-        # default="{'.': 'Gene Expression'}"
-    )
-    parser.add_argument('-g', '--gex_reference', help = 'cellranger reference for gene expression libraries', metavar='')
-    parser.add_argument('-a', '--adt_reference', help = 'csv reference for ADT libraries', metavar='')
-    parser.add_argument('-v', '--vdj_reference', help = 'cellranger reference for VDJ libraries', metavar='')
+    parser.add_argument('--GEX_pattern', help = 'Regex pattern to identify files for gene expression library')
+    parser.add_argument('--ADT_pattern', help = 'Regex pattern to identify files for antibody capture library')
+    parser.add_argument('--VDJ_pattern', help = 'Regex pattern to identify files for VDJ library')
+    parser.add_argument('--GEX_reference', help = 'cellranger reference for gene expression libraries', metavar='')
+    parser.add_argument('--ADT_reference', help = 'csv reference for ADT libraries', metavar='')
+    parser.add_argument('--VDJ_reference', help = 'cellranger reference for VDJ libraries', metavar='')
     args = parser.parse_args()
-    # parse json to py dict
-    args.dictionary = loads(args.dictionary)
     return args
+
+def validate_args(args):
+    # approved_libraries = ['Gene Expression', 'Antibody Capture','VDJ-B', 'VDJ-T']
+    # for lib in args.dictionary.values():
+    #     if lib == 'Gene Expression':
+    #         if args.gex_reference is None:
+    #             exit("You must pass an argument to '-g' to write files for Gene Expression libraries")
+    #         else:
+    #             args.gex_reference = Path(args.gex_reference).resolve()
+    #     elif lib == 'Antibody Capture':
+    #         if args.adt_reference is None:
+    #             exit("You must pass an argument to '-a' to write files for Antibody Capture libraries")
+    #         else:
+    #             args.adt_reference = Path(args.adt_reference).resolve()
+    #     elif lib not in approved_libraries:
+    #         exit("This program can only handle the following libraries:\n" 
+    #         + ', '.join(approved_libraries)
+    #         + "Library '" + lib + "' not recognized")
+    if args.VDJ_reference is None and args.VDJ_reference is None and args.VDJ_reference is None:
+        exit('\nERROR:\nSpecify a library reference and pattern to use this program. Run the program with -h for more info.\nExiting')
+    if (args.GEX_reference is None) ^ (args.GEX_pattern is None):
+        exit('\nERROR:\n--GEX_pattern and --GEX_reference are mutually dependant: you need to specify both if using either.\nExiting')
+    if (args.ADT_reference is None) ^ (args.ADT_pattern is None):
+        exit('\nERROR:\n--ADT_pattern and --ADT_reference are mutually dependant: you need to specify both if using either.\nExiting')
+    if (args.VDJ_reference is None) ^ (args.VDJ_pattern is None):
+        exit('\nERROR:\n--VDJ_pattern and --VDJ_reference are mutually dependant: you need to specify both if using either.\nExiting')
+    if not os.path.exists(args.outdir):
+        print('Outdir not found, creating..\n')
+        os.makedirs(args.outdir)
+    # convert to absolute pathS
+    args.fastq_dir = Path(args.fastq_dir).resolve()
+    args.outdir = Path(args.outdir).resolve()
+    args.cellranger = Path(args.cellranger).resolve()
+    ## precompile not really necessary due to internal caching
+    ## https://stackoverflow.com/questions/452104/is-it-worth-using-pythons-re-compile
+    # args.grouping_pattern = re.compile(args.grouping_pattern)
+    # args.fileID_pattern = re.compile(args.fileID_pattern)
+    # args.parentPath_pattern = re.compile(args.parentPath_pattern)
+    return args
+
 args = get_args()
+args = validate_args(args)
 
 class FileObj:
-    def __init__(self, path, lib_dict = args.dictionary):
+    def __init__(self, path):
         fileID_match = re.search(args.fileID_pattern, path)
         if fileID_match:
             self.id = fileID_match.group(1)
@@ -82,16 +108,31 @@ class FileObj:
             self.group = group_match.group(1)
         else:
             exit('Error with grouping_pattern, not able to extract group from file:\n' + path, '\nExiting')
-        self.library = self.detect_library(lib_dict)
+        self.library = self.detect_library()
 
-    def detect_library(self, lib_dict):
-        for key, lib in lib_dict.items():
-            if key in self.id:
-                return lib
-        print('Library type not detected for sample:\n' 
-        + self.id 
-        + '\nYou may have to manually edit the config or check your dictionary argument\n')
-        return ''
+    def detect_library(self):
+        library = ''
+        for lib, pattern in {
+            'Gene Expression': args.GEX_pattern,
+            'Antibody Capture': args.ADT_pattern,
+            'VDJ': args.VDJ_pattern
+            }.items():
+            if re.search(pattern, self.id):
+                if library != '':
+                    quit(
+                    """
+                    Library patterns not unique enough. File: 
+                        {} 
+                    matched for multiple libraries
+                    Reconfigure the pattenrns argument and try rerunning.
+                    """.format(self.id))
+                library = lib
+        if library == '':
+            print('Library type not detected for sample:\n' 
+            + self.id 
+            + '\nYou may have to manually edit the config or check your dictionary argument\n')
+        return library
+
 
 class FileGroup:
     def __init__(self, name):
@@ -101,35 +142,6 @@ class FileGroup:
     def add_file(self, file):
         self.files.append(file)
         self.libraries.add(file.library)
-
-def validate_args(args):
-    approved_libraries = ['Gene Expression', 'Antibody Capture','VDJ-B', 'VDJ-T']
-    for lib in args.dictionary.values():
-        if lib == 'Gene Expression':
-            if args.gex_reference is None:
-                exit("You must pass an argument to '-g' to write files for Gene Expression libraries")
-            else:
-                args.gex_reference = Path(args.gex_reference).resolve()
-        elif lib == 'Antibody Capture':
-            if args.adt_reference is None:
-                exit("You must pass an argument to '-a' to write files for Antibody Capture libraries")
-            else:
-                args.adt_reference = Path(args.adt_reference).resolve()
-        elif lib not in approved_libraries:
-            exit("This program can only handle the following libraries:\n" 
-            + ', '.join(approved_libraries)
-            + "Library '" + lib + "' not recognized")
-    if not os.path.exists(args.outdir):
-        print('Outdir not found, creating..\n')
-        os.makedirs(args.outdir)
-    # convert to absolute pathS
-    args.fastq_dir = Path(args.fastq_dir).resolve()
-    args.outdir = Path(args.outdir).resolve()
-    args.cellranger = Path(args.cellranger).resolve()
-    # precompile
-    args.grouping_pattern = re.compile(args.grouping_pattern)
-    args.fileID_pattern = re.compile(args.fileID_pattern)
-    return args
 
 def group_fastqs(fastqs):
     grouped_files = {}
@@ -180,18 +192,16 @@ def write_shell_script(sheets, cellranger_path, filename = 'run_cellranger_auto.
         for sample, config in sheets.items():
             sh.writelines(str(cellranger_path) + ' multi --id ' + sample + ' --csv ' + str(config) + '\n')
 
-
-args = validate_args(args)
 ## apparently a known issue that glob.glob with a pathlib.Path won't follow symlinks?
 ## casting as string
 ## https://bugs.python.org/issue33428
 fastqs = glob.glob(str(Path(args.fastq_dir, '**/*R1*fastq*')), recursive=True)
 grouped_files = group_fastqs(fastqs)   
 config_sheets = write_sample_sheets(grouped_files, 
-gex_ref=args.gex_reference, 
-adt_ref=args.adt_reference, 
-output_dir = args.outdir,
-vdj_ref = args.vdj_reference)
+    gex_ref=args.gex_reference, 
+    adt_ref=args.adt_reference, 
+    output_dir = args.outdir,
+    vdj_ref = args.vdj_reference)
 write_shell_script(config_sheets, cellranger_path=args.cellranger)
 
 print('\nProgram completed successfully')
