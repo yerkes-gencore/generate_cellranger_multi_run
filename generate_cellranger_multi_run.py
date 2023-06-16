@@ -58,6 +58,7 @@ def get_args():
     )
     parser.add_argument('-g', '--gex_reference', help = 'cellranger reference for gene expression libraries', metavar='')
     parser.add_argument('-a', '--adt_reference', help = 'csv reference for ADT libraries', metavar='')
+    parser.add_argument('-v', '--vdj_reference', help = 'cellranger reference for VDJ libraries', metavar='')
     args = parser.parse_args()
     # parse json to py dict
     args.dictionary = loads(args.dictionary)
@@ -139,7 +140,7 @@ def group_fastqs(fastqs):
         grouped_files[file.group].add_file(file)
     return grouped_files
 
-def write_sample_sheets(file_groups, gex_ref, adt_ref, output_dir):
+def write_sample_sheets(file_groups, gex_ref, adt_ref, vdj_ref, output_dir):
     sheets = {}
     for sample, file_group in file_groups.items():
         filename = Path(output_dir,str(sample + '_multi_config_auto.csv'))
@@ -155,6 +156,12 @@ def write_sample_sheets(file_groups, gex_ref, adt_ref, output_dir):
                 fo.writelines([
                     '[feature] # For Feature Barcode libraries only\n',
                     'reference,', str(adt_ref), '\n',
+                    '\n'
+                ])
+            if 'VDJ-T' in file_group.libraries or 'VDJ-B' in file_group.libraries:
+                fo.writelines([
+                    '[vdj]\n',
+                    'reference,', str(vdj_ref), '\n',
                     '\n'
                 ])
             fo.writelines(['[libraries]\n', 'fastq_id,fastqs,feature_types\n'])
@@ -176,7 +183,11 @@ args = validate_args(args)
 ## https://bugs.python.org/issue33428
 fastqs = glob.glob(str(Path(args.fastq_dir, '**/*R1*fastq*')), recursive=True)
 grouped_files = group_fastqs(fastqs)   
-config_sheets = write_sample_sheets(grouped_files, gex_ref=args.gex_reference, adt_ref=args.adt_reference, output_dir = args.outdir)
+config_sheets = write_sample_sheets(grouped_files, 
+gex_ref=args.gex_reference, 
+adt_ref=args.adt_reference, 
+output_dir = args.outdir,
+vdj_ref = args.vdj_reference)
 write_shell_script(config_sheets, cellranger_path=args.cellranger)
 
 print('\nProgram completed successfully')
