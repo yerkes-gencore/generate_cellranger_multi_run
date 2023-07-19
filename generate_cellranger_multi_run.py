@@ -180,9 +180,10 @@ def write_sample_sheets(file_groups, gex_ref, adt_ref, vdj_ref, output_dir):
             ## Track written filegroups to avoid writing multiple lines for multiple lanes
             used_files = []
             for file in file_group.files:
-                if file.id not in used_files:
+                if (file.parent_path + file.id) not in used_files:
                     fo.writelines(','.join([file.id, file.parent_path, file.library]) + '\n')
-                used_files.append(file.id)
+                used_files.append((file.parent_path + file.id))
+            fo.writelines('\n')
         sheets[sample] = filename
     return sheets
 
