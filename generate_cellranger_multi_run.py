@@ -21,31 +21,29 @@ def get_args():
     )
     parser.add_argument('-f', '--fastq_dir', 
         help = 'top level directory containing all folders with fastqs of interest',
-        required=True, metavar='')
+        required=True)
     parser.add_argument('-o', '--outdir', 
         help = 'directory to write output from this program to', 
-        required=True, metavar='')
+        required=True)
     parser.add_argument('-c', '--cellranger', 
         help = 'path to cellranger executable of desired version', 
-        required=True, metavar='')
+        required=True)
     parser.add_argument('--grouping_pattern', 
         help = 'Regex pattern with to extract terms to group files on', 
-        required=True, metavar='')
+        required=True)
     parser.add_argument('--fileID_pattern',
         help = "Regex pattern for extracting fastq_id from filenames. Default: r'(?:.+\/)?([^\/]+?)(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+'", 
-        default = r"(?:.+\/)?([^\/]+?)(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+",
-        metavar='')
+        default = r"(?:.+\/)?([^\/]+?)(?:_S\d+)?(?:_L\d+_)?R\d(?:_\d+)?.fastq.+")
     parser.add_argument('--parentPath_pattern',
         help = """Regex pattern to extract the parent directory of a file (the 'fastqs' column of the cellranger multi config). 
             Default: r'(.+\/)[^\/]+.fastq.+'""",
-        default = r"(.+\/)[^\/]+.fastq.+",
-        metavar='')
+        default = r"(.+\/)[^\/]+.fastq.+")
     parser.add_argument('--GEX_pattern', help = 'Regex pattern to identify files for gene expression library')
     parser.add_argument('--ADT_pattern', help = 'Regex pattern to identify files for antibody capture library')
     parser.add_argument('--VDJ_pattern', help = 'Regex pattern to identify files for VDJ library')
-    parser.add_argument('--GEX_reference', help = 'cellranger reference for gene expression libraries', metavar='')
-    parser.add_argument('--ADT_reference', help = 'csv reference for ADT libraries', metavar='')
-    parser.add_argument('--VDJ_reference', help = 'cellranger reference for VDJ libraries', metavar='')
+    parser.add_argument('--GEX_reference', help = 'cellranger reference for gene expression libraries')
+    parser.add_argument('--ADT_reference', help = 'csv reference for ADT libraries')
+    parser.add_argument('--VDJ_reference', help = 'cellranger reference for VDJ libraries')
     args = parser.parse_args()
     return args
 
@@ -66,7 +64,7 @@ def validate_args(args):
     #         exit("This program can only handle the following libraries:\n" 
     #         + ', '.join(approved_libraries)
     #         + "Library '" + lib + "' not recognized")
-    if args.VDJ_reference is None and args.VDJ_reference is None and args.VDJ_reference is None:
+    if args.GEX_reference is None and args.ADT_reference is None and args.VDJ_reference is None:
         exit('\nERROR:\nSpecify a library reference and pattern to use this program. Run the program with -h for more info.\nExiting')
     if (args.GEX_reference is None) ^ (args.GEX_pattern is None):
         exit('\nERROR:\n--GEX_pattern and --GEX_reference are mutually dependant: you need to specify both if using either.\nExiting')
@@ -112,21 +110,23 @@ class FileObj:
 
     def detect_library(self):
         library = ''
-        for lib, pattern in {
+        patterns = {
             'Gene Expression': args.GEX_pattern,
             'Antibody Capture': args.ADT_pattern,
             'VDJ': args.VDJ_pattern
-            }.items():
-            if re.search(pattern, self.id):
-                if library != '':
-                    quit(
-                    """
-                    Library patterns not unique enough. File: 
-                        {} 
-                    matched for multiple libraries
-                    Reconfigure the pattenrns argument and try rerunning.
-                    """.format(self.id))
-                library = lib
+            }
+        for lib, pattern in patterns.items():
+            if pattern is not None:
+                if re.search(pattern, self.id):
+                    if library != '':
+                        quit(
+                        """
+                        Library patterns not unique enough. File: 
+                            {} 
+                        matched for multiple libraries
+                        Reconfigure the pattenrns argument and try rerunning.
+                        """.format(self.id))
+                    library = lib
         if library == '':
             print('Library type not detected for sample:\n' 
             + self.id 
@@ -198,10 +198,10 @@ def write_shell_script(sheets, cellranger_path, filename = 'run_cellranger_auto.
 fastqs = glob.glob(str(Path(args.fastq_dir, '**/*R1*fastq*')), recursive=True)
 grouped_files = group_fastqs(fastqs)   
 config_sheets = write_sample_sheets(grouped_files, 
-    gex_ref=args.gex_reference, 
-    adt_ref=args.adt_reference, 
+    gex_ref=args.GEX_reference, 
+    adt_ref=args.ADT_reference, 
     output_dir = args.outdir,
-    vdj_ref = args.vdj_reference)
+    vdj_ref = args.VDJ_reference)
 write_shell_script(config_sheets, cellranger_path=args.cellranger)
 
 print('\nProgram completed successfully')
